@@ -1,0 +1,96 @@
+---
+## Author: Ben Barrows
+## bbarrows@getwellnetwork.com
+## Tested only on Ansible 2.2.0.0
+
+- name: Install Latest HWE Stack on PHYSICAL Ubuntu 14.04 (trusty) VIDEOSERVER
+# If not hardcoding host here, add --extra-vars"=hosts=host.sub.tld"
+# quotes included, on the command line and uncomment next line; else uncomment single host line below
+#  hosts: '{{ hosts }}'
+  hosts: vls2.ricv.gwn
+  user: root
+  vars:
+    boot_size_mb: '271'
+    vid_stream_indicator: 'W'
+
+  tasks:
+    - name: Checking For Acceptable Boot Partition Size
+      shell: /bin/df -H /boot | awk 'END { print $2 }'
+      register: boot_size_output
+      failed_when: boot_size_output.stdout < '{{ boot_size_mb }}'
+    - debug:
+        msg: "System {{ inventory_hostname }} has an acceptable boot partition size of {{ boot_size_output.stdout }}, thus OK to proceed"
+      when: boot_size_output.stdout is defined
+
+    - name: Checking For Video Streams
+      shell: /usr/bin/wget -O- --no-proxy -q "http://localhost/status/lighttpd?auto" |grep Scoreboard |cut -c13
+      register: video_stream_status
+      failed_when: video_stream_status.stdout == '{{ vid_stream_indicator }}'
+    - debug:
+        msg: "System {{ inventory_hostname }} has ZERO active video streams, thus OK to proceed"
+      when: video_stream_status.stdout is defined
+
+    - name: Install Latest linux-generic-lts-xenial Package
+      apt:
+        name: linux-generic-lts-xenial
+        state: latest
+        install_recommends: yes
+        update_cache: yes
+        cache_valid_time: 3600
+      when:
+        - ansible_form_factor == 'Rack Mount Chassis'
+        - ansible_distribution_release == 'trusty'
+        - ansible_distribution_version == '14.04'
+      register: kernel_upgrade
+
+    - name: Running apt dist-upgrade
+      apt:     
+        upgrade: dist
+      when:
+        - ansible_form_factor == 'Rack Mount Chassis'
+        - ansible_distribution_release == 'trusty'
+        - ansible_distribution_version == '14.04'
+      register: apt_distupgrade
+
+# Ansible BUG 4029 - package name apparently required to use this module option
+# This method will be broken until fixed upstream - shell workaround method below this block
+#    - name: apt autoremove
+#      apt:
+#        autoremove: yes
+#      when:
+#        - ansible_form_factor == 'Rack Mount Chassis'
+#        - ansible_distribution_release == 'trusty'
+#        - ansible_distribution_version == '14.04'
+#      register: apt_autoremove
+
+    - name: Running apt autoremove
+      shell: apt-get -y autoremove --purge
+      when:
+        - ansible_form_factor == 'Rack Mount Chassis'
+        - ansible_distribution_release == 'trusty'
+        - ansible_distribution_version == '14.04'
+      register: apt_autoremove
+
+    - name: Rebooting Server due to kernel update
+      command: reboot "Kernel Updates Triggered, reboot required!"
+      async: 0
+      poll: 0
+      ignore_errors: true
+      when:
+        - ansible_form_factor == 'Rack Mount Chassis'
+        - ansible_distribution_release == 'trusty'
+        - ansible_distribution_version == '14.04'
+        - kernel_upgrade|changed
+
+#    - name: waiting for server to come back
+#      connection: local
+#      wait_for:
+#        delay: 180
+#        host: "{{ inventory_hostname }}"
+#        port: 22
+#        state: started
+#      when:
+#        - ansible_form_factor == 'Rack Mount Chassis'
+#        - ansible_distribution_release == 'trusty'
+#        - ansible_distribution_version == '14.04'
+#        - kernel_upgrade|changed

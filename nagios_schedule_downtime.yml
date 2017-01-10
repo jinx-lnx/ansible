@@ -1,0 +1,9 @@
+---
+
+- name: Schedule Single Host Maintenance in Nagios
+  hosts: nagios.hq
+  gather_facts: False
+  user: root
+  tasks:
+   - nagios: action=downtime minutes=60 service=host comment="Scheduled DevOps Maintenance" host=vls2.ccl.gwn
+   - nagios: action=downtime minutes=60 services=all comment="Scheduled DevOps Maintenance" host=vls2.ccl.gwn

@@ -1,0 +1,14 @@
+---
+- name: Check Boot Partition Size
+  hosts: batch.servers
+  vars:
+    boot_size_mb: '271'
+
+  tasks:
+    - name: Checking For Acceptable Boot Partition Size
+      shell: /bin/df -H /boot | awk 'END { print $2 }'
+      register: boot_size_output
+      failed_when: boot_size_output.stdout < '{{ boot_size_mb }}'
+    - debug:
+        msg: "System {{ inventory_hostname }} has an acceptable boot partition size of {{ boot_size_output.stdout }}, thus OK to proceed"
+      when: boot_size_output.stdout is defined
