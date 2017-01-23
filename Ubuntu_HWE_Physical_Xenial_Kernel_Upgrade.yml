@@ -96,16 +96,16 @@
         - ansible_distribution_version == '14.04'
       register: apt_autoremove
 
-    - name: Rebooting Server due to kernel update
-      command: reboot "Kernel Updates Triggered, reboot required!"
-      async: 0
-      poll: 0
-      ignore_errors: true
-      when:
-        - ansible_form_factor == 'Rack Mount Chassis'
-        - ansible_distribution_release == 'trusty'
-        - ansible_distribution_version == '14.04'
-        - kernel_upgrade|changed
+#    - name: Rebooting Server due to kernel update
+#      command: reboot "Kernel Updates Triggered, reboot required!"
+#      async: 0
+#      poll: 0
+#      ignore_errors: true
+#      when:
+#        - ansible_form_factor == 'Rack Mount Chassis'
+#        - ansible_distribution_release == 'trusty'
+#        - ansible_distribution_version == '14.04'
+#        - kernel_upgrade|changed
 
 #    - name: waiting for server to come back
 #      connection: local
